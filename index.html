@@ -1,0 +1,1549 @@
+<!DOCTYPE html>
+<html lang="cs" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dlouhodobé závazky a rezervy - Testovací aplikace OA</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                            800: '#166534',
+                            900: '#14532d',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome CDN for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Animations */
+        @keyframes pulse-success {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+        @keyframes shake-error {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-6px); }
+            40%, 80% { transform: translateX(6px); }
+        }
+        .animate-success {
+            animation: pulse-success 0.3s ease-in-out;
+        }
+        .animate-error {
+            animation: shake-error 0.4s ease-in-out;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+
+        /* Print styles for protocol */
+        @media print {
+            body {
+                background: white !important;
+                color: black !important;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .print-only {
+                display: block !important;
+            }
+            .print-card {
+                border: 1px solid #ccc !important;
+                box-shadow: none !important;
+                background: white !important;
+                color: black !important;
+                page-break-inside: avoid;
+            }
+        }
+        .print-only {
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col justify-between selection:bg-indigo-500 selection:text-white">
+
+    <!-- HEADER -->
+    <header class="bg-slate-800/90 border-b border-slate-700/80 sticky top-0 z-30 backdrop-blur-md no-print">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="p-2.5 bg-indigo-600/20 text-indigo-400 rounded-xl border border-indigo-500/30">
+                    <i class="fa-solid fa-calculator text-2xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-white tracking-tight flex items-center gap-2">
+                        Dlouhodobé závazky a rezervy
+                        <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">OA Účetnictví</span>
+                    </h1>
+                    <p class="text-xs text-slate-400">Interaktivní testovací aplikace pro OA (Účetnictví 3. ročník)</p>
+                </div>
+            </div>
+
+            <!-- Header Quick Actions -->
+            <div class="flex items-center gap-2 sm:gap-3">
+                <!-- Sound Toggle -->
+                <button id="soundToggleBtn" onclick="toggleSound()" class="p-2.5 rounded-xl bg-slate-700/50 hover:bg-slate-700 text-slate-300 hover:text-white transition-all border border-slate-600/50" title="Zvukové efekty (Zapnuto/Vypnuto)">
+                    <i id="soundIcon" class="fa-solid fa-volume-high text-base"></i>
+                </button>
+                
+                <!-- Reshuffle Button -->
+                <button onclick="reshuffleQuestions()" class="px-3 py-2 rounded-xl bg-slate-700/50 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-medium transition-all border border-slate-600/50 flex items-center gap-2" title="Proházet otázky i možnosti (R)">
+                    <i class="fa-solid fa-shuffle text-indigo-400"></i>
+                    <span class="hidden sm:inline">Proházet</span>
+                </button>
+
+                <!-- Restart Button -->
+                <button onclick="confirmRestart()" class="px-3 py-2 rounded-xl bg-slate-700/50 hover:bg-rose-900/30 text-slate-300 hover:text-rose-300 text-xs font-medium transition-all border border-slate-600/50 hover:border-rose-500/30 flex items-center gap-2">
+                    <i class="fa-solid fa-rotate-left text-rose-400"></i>
+                    <span class="hidden sm:inline">Restart</span>
+                </button>
+
+                <!-- Protocol Modal Button -->
+                <button onclick="openProtocolModal()" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-lg shadow-indigo-600/20 transition-all flex items-center gap-2">
+                    <i class="fa-solid fa-file-invoice"></i>
+                    <span>Tiskový protokol</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN APP CONTENT -->
+    <main class="max-w-5xl mx-auto px-4 sm:px-6 py-6 flex-1 w-full no-print">
+
+        <!-- DASHBOARD STATS BAR -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6">
+            <!-- Progress Card -->
+            <div class="bg-slate-800/60 rounded-xl p-3.5 border border-slate-700/60 shadow-sm flex items-center gap-3">
+                <div class="p-2.5 bg-blue-500/10 text-blue-400 rounded-lg">
+                    <i class="fa-solid fa-list-check text-lg"></i>
+                </div>
+                <div>
+                    <div class="text-xs text-slate-400 font-medium">Postup</div>
+                    <div class="text-base font-bold text-slate-100" id="statProgress">0 / 40</div>
+                </div>
+            </div>
+
+            <!-- Score / Correct Card -->
+            <div class="bg-slate-800/60 rounded-xl p-3.5 border border-slate-700/60 shadow-sm flex items-center gap-3">
+                <div class="p-2.5 bg-emerald-500/10 text-emerald-400 rounded-lg">
+                    <i class="fa-solid fa-circle-check text-lg"></i>
+                </div>
+                <div>
+                    <div class="text-xs text-slate-400 font-medium">Správně</div>
+                    <div class="text-base font-bold text-emerald-400" id="statCorrect">0</div>
+                </div>
+            </div>
+
+            <!-- Incorrect Card -->
+            <div class="bg-slate-800/60 rounded-xl p-3.5 border border-slate-700/60 shadow-sm flex items-center gap-3">
+                <div class="p-2.5 bg-rose-500/10 text-rose-400 rounded-lg">
+                    <i class="fa-solid fa-circle-xmark text-lg"></i>
+                </div>
+                <div>
+                    <div class="text-xs text-slate-400 font-medium">Chyby</div>
+                    <div class="text-base font-bold text-rose-400" id="statIncorrect">0</div>
+                </div>
+            </div>
+
+            <!-- OA Grade Card -->
+            <div class="bg-slate-800/60 rounded-xl p-3.5 border border-slate-700/60 shadow-sm flex items-center gap-3">
+                <div id="gradeBadgeBox" class="p-2.5 bg-indigo-500/10 text-indigo-400 rounded-lg font-black text-lg min-w-[42px] text-center">
+                    -
+                </div>
+                <div>
+                    <div class="text-xs text-slate-400 font-medium">Známka (OA)</div>
+                    <div class="text-sm font-bold text-slate-100" id="statGrade">Zatím nehodnoceno</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FILTER & NAVIGATION TOOLBAR -->
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-5 bg-slate-800/40 p-3 rounded-2xl border border-slate-700/50">
+            <div class="flex items-center gap-2">
+                <!-- Error Filter Toggle -->
+                <button id="errorFilterBtn" onclick="toggleErrorFilter()" class="px-3.5 py-1.5 rounded-xl bg-slate-700/60 hover:bg-slate-700 text-slate-300 text-xs font-medium transition-all border border-slate-600/50 flex items-center gap-2">
+                    <i class="fa-solid fa-filter text-amber-400"></i>
+                    <span>Pouze chyby</span>
+                    <span id="errorCountBadge" class="bg-rose-500/20 text-rose-300 px-2 py-0.5 rounded-full text-[10px] font-bold border border-rose-500/30">0</span>
+                </button>
+            </div>
+
+            <div class="text-xs font-semibold text-slate-400 flex items-center gap-2">
+                <span>Úspěšnost: <strong id="statAccuracy" class="text-indigo-400">0 %</strong></span>
+            </div>
+        </div>
+
+        <!-- QUESTION CARD -->
+        <div id="questionContainer" class="bg-slate-800/90 rounded-2xl border border-slate-700/80 shadow-xl overflow-hidden transition-all duration-300">
+            
+            <!-- Question Header & Category -->
+            <div class="px-6 py-4 bg-slate-800 border-b border-slate-700/80 flex flex-wrap justify-between items-center gap-3">
+                <div class="flex items-center gap-2">
+                    <span class="px-3 py-1 rounded-lg bg-indigo-600/20 text-indigo-300 border border-indigo-500/30 text-xs font-bold" id="qNumberBadge">
+                        Otázka 1 z 40
+                    </span>
+                    <span class="text-xs font-medium text-slate-400 px-2.5 py-1 rounded-lg bg-slate-700/40 border border-slate-700" id="qCategory">
+                        Kategorie
+                    </span>
+                </div>
+                <div class="text-xs font-medium text-slate-400 flex items-center gap-1">
+                    <i class="fa-regular fa-keyboard text-slate-500"></i>
+                    <span class="hidden sm:inline">Klávesy [1-4] nebo [A-D]</span>
+                </div>
+            </div>
+
+            <!-- Progress line bar inside card -->
+            <div class="w-full bg-slate-700/40 h-1.5">
+                <div id="cardProgressBar" class="bg-indigo-500 h-1.5 transition-all duration-300" style="width: 2.5%;"></div>
+            </div>
+
+            <!-- Question Text -->
+            <div class="p-6 sm:p-8">
+                <h2 id="qText" class="text-lg sm:text-xl font-semibold text-slate-100 leading-snug mb-6">
+                    Načítání otázky...
+                </h2>
+
+                <!-- Options Grid -->
+                <div id="optionsGrid" class="grid grid-cols-1 gap-3.5 mb-6">
+                    <!-- Dynamic Options Inserted Here -->
+                </div>
+
+                <!-- Explanation & Citation Box (Appears after answering) -->
+                <div id="explanationBox" class="hidden mt-6 p-5 rounded-xl bg-slate-900/90 border border-slate-700/80 space-y-3 transition-all duration-300">
+                    <div class="flex items-center gap-2 text-indigo-400 font-bold text-xs uppercase tracking-wider">
+                        <i class="fa-solid fa-lightbulb text-amber-400"></i>
+                        <span>Vysvětlení a citace ze studijního materiálu</span>
+                    </div>
+                    <p id="explanationText" class="text-sm text-slate-300 leading-relaxed font-normal">
+                        <!-- Explanation text -->
+                    </p>
+                    <div class="pt-2 border-t border-slate-800 text-xs text-slate-400 italic flex items-start gap-2">
+                        <i class="fa-solid fa-quote-left text-indigo-400/60 mt-0.5"></i>
+                        <span id="citationText"><!-- Citation text --></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card Footer Navigation -->
+            <div class="px-6 py-4 bg-slate-800/60 border-t border-slate-700/80 flex justify-between items-center gap-4">
+                <button id="prevBtn" onclick="prevQuestion()" class="px-4 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 disabled:opacity-40 disabled:hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-all flex items-center gap-2">
+                    <i class="fa-solid fa-arrow-left"></i>
+                    <span>Předchozí</span>
+                </button>
+
+                <div class="text-xs text-slate-500 hidden sm:block">
+                    Použijte šipky <span class="bg-slate-700 px-1.5 py-0.5 rounded text-slate-300">←</span> <span class="bg-slate-700 px-1.5 py-0.5 rounded text-slate-300">→</span> nebo <span class="bg-slate-700 px-1.5 py-0.5 rounded text-slate-300">Enter</span>
+                </div>
+
+                <button id="nextBtn" onclick="nextQuestion()" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md shadow-indigo-600/20 transition-all flex items-center gap-2">
+                    <span>Další</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- QUICK QUESTION SELECTOR GRID -->
+        <div class="mt-8 bg-slate-800/40 rounded-2xl p-4 sm:p-5 border border-slate-700/50">
+            <div class="flex items-center justify-between mb-3">
+                <span class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                    <i class="fa-solid fa-grip text-indigo-400"></i>
+                    <span>Přehled všech otázek</span>
+                </span>
+                <span class="text-xs text-slate-400">
+                    <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 mr-1"></span>Správně
+                    <span class="inline-block w-2.5 h-2.5 rounded-full bg-rose-500 ml-2 mr-1"></span>Chyba
+                    <span class="inline-block w-2.5 h-2.5 rounded-full bg-slate-700 ml-2 mr-1"></span>Zatím
+                </span>
+            </div>
+            <div id="questionGridNav" class="grid grid-cols-5 sm:grid-cols-10 gap-2">
+                <!-- 40 Question Chips generated dynamically -->
+            </div>
+        </div>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="bg-slate-800/80 border-t border-slate-700/60 py-4 text-center text-xs text-slate-400 no-print mt-8">
+        <div class="max-w-5xl mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-2">
+            <div>
+                © 2026 Obchodní akademie | Učivo: <strong>3_dlouhodobé závazky_rezervy_OK</strong>
+            </div>
+            <div class="flex gap-4">
+                <span>Stupnice OA: 1 (90%+), 2 (75%+), 3 (60%+), 4 (45%+), 5 (&lt;45%)</span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- MODAL: PRINT PROTOCOL / RESULT REPORT -->
+    <div id="protocolModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden overflow-y-auto p-4 sm:p-6 flex justify-center items-start">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-4xl shadow-2xl overflow-hidden my-8 print-card">
+            
+            <!-- Modal Header (no-print) -->
+            <div class="px-6 py-4 bg-slate-900 border-b border-slate-700 flex justify-between items-center no-print">
+                <div class="flex items-center gap-2 text-indigo-400 font-bold text-base">
+                    <i class="fa-solid fa-file-contract text-xl"></i>
+                    <span>Výsledný tiskový protokol</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button onclick="window.print()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2">
+                        <i class="fa-solid fa-print"></i>
+                        <span>Vytisknout / Uložit PDF</span>
+                    </button>
+                    <button onclick="closeProtocolModal()" class="p-2 text-slate-400 hover:text-white transition-all">
+                        <i class="fa-solid fa-xmark text-xl"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Modal Printable Area -->
+            <div class="p-6 sm:p-8 space-y-6 text-slate-100 bg-slate-800 print-card" id="printableArea">
+                
+                <!-- Protocol Header -->
+                <div class="border-b border-slate-700 pb-6">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+                        <div>
+                            <h2 class="text-2xl font-extrabold text-white tracking-tight">PROTOKOL O TESTOVÁNÍ</h2>
+                            <p class="text-xs text-slate-400 mt-0.5">Předmět: Účetnictví (3. ročník) | Téma: Dlouhodobé závazky a rezervy</p>
+                        </div>
+                        <div class="text-right sm:text-right text-xs text-slate-400">
+                            <div>Obchodní akademie</div>
+                            <div id="protocolDate">Datum: --.--.2026</div>
+                        </div>
+                    </div>
+
+                    <!-- Student Info Inputs (Printable) -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-900/60 p-4 rounded-xl border border-slate-700/60 print-card">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Jméno a příjmení žáka:</label>
+                            <input type="text" id="studentNameInput" placeholder="Napište své jméno..." class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-indigo-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Třída / Skupina:</label>
+                            <input type="text" id="studentClassInput" placeholder="např. 3.A" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-indigo-500">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Summary Scores Grid -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-700/60 text-center print-card">
+                        <div class="text-xs text-slate-400 mb-1">Celkový počet otázek</div>
+                        <div class="text-2xl font-black text-white" id="protoTotalQ">40</div>
+                    </div>
+                    <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-700/60 text-center print-card">
+                        <div class="text-xs text-slate-400 mb-1">Správné odpovědi</div>
+                        <div class="text-2xl font-black text-emerald-400" id="protoCorrectQ">0</div>
+                    </div>
+                    <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-700/60 text-center print-card">
+                        <div class="text-xs text-slate-400 mb-1">Úspěšnost (%)</div>
+                        <div class="text-2xl font-black text-indigo-400" id="protoPercent">0 %</div>
+                    </div>
+                    <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-700/60 text-center print-card">
+                        <div class="text-xs text-slate-400 mb-1">Výsledná známka (OA)</div>
+                        <div class="text-2xl font-black text-amber-400" id="protoGrade">-</div>
+                    </div>
+                </div>
+
+                <!-- Grading Scale Reference -->
+                <div class="p-3 bg-slate-900/40 rounded-xl border border-slate-700/50 text-xs text-slate-400 flex flex-wrap justify-between gap-2">
+                    <span><strong>Hodnotící stupnice OA:</strong></span>
+                    <span>1: 100–90%</span>
+                    <span>2: 89–75%</span>
+                    <span>3: 74–60%</span>
+                    <span>4: 59–45%</span>
+                    <span>5: 44–0%</span>
+                </div>
+
+                <!-- Detailed Audit Table -->
+                <div>
+                    <h3 class="text-sm font-bold text-white uppercase tracking-wider mb-3">Detailní přehled otázek a citace</h3>
+                    <div class="space-y-3" id="protoQuestionList">
+                        <!-- Dynamic Question Protocol Review -->
+                    </div>
+                </div>
+
+                <!-- Signature Footer -->
+                <div class="pt-8 border-t border-slate-700/80 grid grid-cols-2 gap-8 text-xs text-slate-400 mt-8">
+                    <div>
+                        <div class="border-b border-slate-600 pb-1 mb-1"></div>
+                        <div class="text-center">Podpis žáka</div>
+                    </div>
+                    <div>
+                        <div class="border-b border-slate-600 pb-1 mb-1"></div>
+                        <div class="text-center">Hodnocení / Podpis vyučujícího</div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: RESTART CONFIRMATION -->
+    <div id="restartModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 max-w-sm w-full shadow-2xl text-center space-y-4">
+            <div class="w-12 h-12 bg-rose-500/10 text-rose-400 rounded-full flex items-center justify-center mx-auto text-xl">
+                <i class="fa-solid fa-rotate-left"></i>
+            </div>
+            <h3 class="text-lg font-bold text-white">Restartovat test?</h3>
+            <p class="text-xs text-slate-300">Veškerý dosavadní postup a odpovědi budou vymazány.</p>
+            <div class="flex gap-3 pt-2">
+                <button onclick="closeRestartModal()" class="flex-1 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-semibold transition-all">
+                    Zrušit
+                </button>
+                <button onclick="executeRestart()" class="flex-1 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold transition-all shadow-lg shadow-rose-600/20">
+                    Ano, restartovat
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- JAVASCRIPT LOGIC & DATA -->
+    <script>
+        /* ==========================================================================
+           1. QUESTION DATASET (Exact 40 Questions, 100% material coverage)
+           Equalized Option Lengths & Exact 10x A, 10x B, 10x C, 10x D answers
+           ========================================================================== */
+        const baseQuestions = [
+            {
+                "kategorie": "Dlouhodobé cizí zdroje - Základní vymezení",
+                "otazka": "Jaká je základní charakteristika dlouhodobých cizích zdrojů a do které účtové třídy patří v účtové osnově?",
+                "moznosti": [
+                    "Představují vlastní kapitál podniku bez stanovené splatnosti a jsou účtovány v účtové třídě 0.",
+                    "Představují krátkodobé závazky se splatností do 1 roku a jsou účtovány výhradně v účtové třídě 3.",
+                    "Představují cizí kapitál s dobou splatnosti delší než 1 rok a jsou účtovány v účtové třídě 4.",
+                    "Představují přechodné účty pasiv se splatností do jednoho měsíce a účtují se v účtové třídě 2."
+                ],
+                "spravnaIndex": 2,
+                "vysvetleni": "Dlouhodobé cizí zdroje mají dobu splatnosti delší než 1 rok a v účtové osnově jsou zařazeny do účtové třídy 4 (kapitálové účty a dlouhodobé závazky).",
+                "citace": "Dlouhodobé cizí zdroje – doba splatnosti > 1 rok. Účtová třída 4 – kapitálové účty a dlouhodobé závazky."
+            },
+            {
+                "kategorie": "Dlouhodobé závazky - Účtový přehled",
+                "otazka": "Který z následujících účtů slouží k evidenci dlouhodobých přijatých provozních záloh od odběratelů?",
+                "moznosti": [
+                    "Účet 475 – Dlouhodobé přijaté zálohy, který slouží k evidenci přijatých záloh se splatností nad 1 rok.",
+                    "Účet 324 – Přijaté provozní zálohy, který slouží k evidenci běžných krátkodobých provozních záloh.",
+                    "Účet 321 – Dodavatelé, který zachycuje běžné krátkodobé závazky z obchodního styku vůči partnerům.",
+                    "Účet 461 – Dlouhodobé úvěry, který zachycuje poskytnuté bankovní úvěry se splatností nad jeden rok."
+                ],
+                "spravnaIndex": 0,
+                "vysvetleni": "Pro dlouhodobé přijaté zálohy je určen účet 475, zatímco účet 324 slouží pro krátkodobé přijaté provozní zálohy.",
+                "citace": "Účet 475 – dlouhodobé přijaté zálohy (účet 324 – přijaté provozní zálohy)."
+            },
+            {
+                "kategorie": "Dlouhodobé závazky - Směnky k úhradě",
+                "otazka": "Jaká dvojice účtů rozlišuje dlouhodobé a krátkodobé směnky k úhradě v účetnictví podniku?",
+                "moznosti": [
+                    "Dlouhodobé směnky na účtu 322 a krátkodobé směnky na účtu 478 v rozvaze podniku.",
+                    "Dlouhodobé směnky na účtu 241 a krátkodobé směnky na účtu 473 v rozvaze podniku.",
+                    "Dlouhodobé směnky na účtu 461 a krátkodobé směnky na účtu 231 v rozvaze podniku.",
+                    "Dlouhodobé směnky na účtu 478 a krátkodobé směnky na účtu 322 v rozvaze podniku."
+                ],
+                "spravnaIndex": 3,
+                "vysvetleni": "Dlouhodobé směnky k úhradě se účtují na účtu 478, zatímco krátkodobé směnky k úhradě na účtu 322.",
+                "citace": "Účet 478 – dlouhodobé směnky k úhradě (účet 322 – směnky k úhradě)."
+            },
+            {
+                "kategorie": "Dlouhodobé závazky - Emitované dluhopisy",
+                "otazka": "Které účty se používají pro účtování emitovaných dlouhodobých a krátkodobých dluhopisů?",
+                "moznosti": [
+                    "Dlouhodobé dluhopisy na účtu 241 a krátkodobé dluhopisy na účtu 473 v rozvaze podniku.",
+                    "Dlouhodobé dluhopisy na účtu 473 a krátkodobé dluhopisy na účtu 241 v rozvaze podniku.",
+                    "Dlouhodobé dluhopisy na účtu 478 a krátkodobé dluhopisy na účtu 322 v rozvaze podniku.",
+                    "Dlouhodobé dluhopisy na účtu 324 a krátkodobé dluhopisy na účtu 475 v rozvaze podniku."
+                ],
+                "spravnaIndex": 1,
+                "vysvetleni": "Dlouhodobé emitované dluhopisy patří na účet 473, krátkodobé emitované dluhopisy na účet 241.",
+                "citace": "Účet 473 – emitované dluhopisy (účet 241 – emitované krátkodobé dluhopisy)."
+            },
+            {
+                "kategorie": "Jiné dlouhodobé závazky - Účet 479",
+                "otazka": "Která z následujících položek se vykazuje a účtuje na účtu 479 – Jiné dlouhodobé závazky?",
+                "moznosti": [
+                    "Poskytnutý bankovní úvěr na pořízení dlouhodobého hmotného majetku podniku.",
+                    "Přijatá krátkodobá provozní záloha na dodávku zboží od tuzemského odběratele.",
+                    "Vydané krátkodobé dluhopisy určené k veřejnému obchodu na finančním trhu.",
+                    "Nesplacený vklad společníka nebo přijatá dlouhodobá zápůjčka od společníka."
+                ],
+                "spravnaIndex": 3,
+                "vysvetleni": "Účet 479 – Jiné dlouhodobé závazky zachycuje např. nesplacený vklad společníka, dlouhodobé zápůjčky společníků či vklady tichého společníka.",
+                "citace": "Účet 479 – jiné dlouhodobé závazky (nesplacený vklad společníka, zápůjčky společníků, vklady tichého společníka)."
+            },
+            {
+                "kategorie": "Rezervy - Širší pojetí časového rozlišení",
+                "otazka": "Do kterého účetního konceptu spadají rezervy a k jakému hlavnímu účelu v podniku slouží?",
+                "moznosti": [
+                    "Spadají do širšího pojetí časového rozlišení a slouží k úhradě očekávaných budoucích závazků.",
+                    "Spadají do užšího pojetí časového rozlišení a slouží ke krátkodobému financování zásob.",
+                    "Spadají do finančního účetnictví a slouží výhradně ke zvýšení základu daně v běžném roce.",
+                    "Spadají do podrozvahové evidence a slouží k evidenci drobných provozních pohledávek."
+                ],
+                "spravnaIndex": 0,
+                "vysvetleni": "Rezervy tvoří součást širšího pojetí časového rozlišení a slouží ke krytí a úhradě budoucích očekávaných závazků.",
+                "citace": "Rezervy (účtová skupina 45) – Časové rozlišení v širším pojetí. Slouží k úhradě závazků, které se očekávají v budoucnu."
+            },
+            {
+                "kategorie": "Rezervy - Dopad na hospodářský výsledek",
+                "otazka": "Jaký má tvorba rezerv bezprostřední vliv na účetní hospodářský výsledek podniku v roce tvorby?",
+                "moznosti": [
+                    "Tvorba rezerv se účtuje do výnosů, což vede k okamžitému zvýšení hospodářského výsledku.",
+                    "Tvorba rezerv se účtuje na rozvahové účty, což nemá vůbec žádný vliv na hospodářský výsledek.",
+                    "Tvorba rezerv se účtuje do nákladů, což přímo vede ke snížení hospodářského výsledku podniku.",
+                    "Tvorba rezerv se účtuje na účty vlastního kapitálu a zvyšuje nerozdělený zisk minulých let."
+                ],
+                "spravnaIndex": 2,
+                "vysvetleni": "Tvorba rezerv se zachycuje na nákladových účtech (skupina 55), čímž snižuje hospodářský výsledek podniku.",
+                "citace": "Účtují se do nákladů – snižují HV podniku."
+            },
+            {
+                "kategorie": "Rezervy - Časový horizont tvorby",
+                "otazka": "Na jaké časové období se standardně tvoří rezervy u majetku v 2. odpisové skupině?",
+                "moznosti": [
+                    "Tvoří se na dobu kratší než 6 měsíců a peněžní prostředky musí ležet v pokladně podniku.",
+                    "Tvoří se na dobu delší než 1 rok, maximálně však na dobu 3 let pro 2. odpisovou skupinu.",
+                    "Tvoří se na dobu od 6 měsíců do 1 roku a peněžní prostředky jsou volně k dispozici.",
+                    "Tvoří se na dobu od 5 do 10 let a peněžní prostředky jsou spravovány státním orgánem."
+                ],
+                "spravnaIndex": 1,
+                "vysvetleni": "Rezervy se tvoří na dobu > 1 rok, maximálně na 3 roky u 2. odpisové skupiny (u 3.–6. skupiny je doba tvorby delší).",
+                "citace": "Tvoří se na dobu > 1 rok, max. na dobu 3 let – 2. odpisová skupina (u 3.–6. odpisové skupiny je max. doba tvorby delší)."
+            },
+            {
+                "kategorie": "Rezervy - Finanční zabezpečení a BÚ",
+                "otazka": "Co platí o peněžních prostředcích určených na krytí budoucích závazků při tvorbě zákonných rezerv?",
+                "moznosti": [
+                    "Na bankovním účtu je 'zablokovaná' odpovídající část peněžních prostředků určená na úhradu.",
+                    "Peněžní prostředky musejí být v plné výši převedeny na speciální účet finančního úřadu.",
+                    "Peněžní prostředky musejí být vybrány v hotovosti a uloženy do trezoru v sídle podniku.",
+                    "Na bankovním účtu nedochází k žádné blokaci a peníze lze volně použít na jakýkoliv účel."
+                ],
+                "spravnaIndex": 0,
+                "vysvetleni": "Při tvorbě zákonných rezerv musí mít podnik na bankovním účtu 'zablokovanou' část peněžních prostředků k úhradě budoucího dlužení.",
+                "citace": "Na BÚ je „zablokovaná“ část peněz na úhradu dluhu v budoucnosti."
+            },
+            {
+                "kategorie": "Zákonné rezervy - Právní úprava a účty",
+                "otazka": "Které účty se používají pro tvorbu zákonných rezerv a jaká je jejich daňová uznatelnost?",
+                "moznosti": [
+                    "Účty 459 a 554; jedná se o rezervy daňově neuznatelné, které při výpočtu zvyšují daňový základ.",
+                    "Účty 461 a 562; jedná se o rezervy daňově neúčinné, které nemají na výpočet daně žádný vliv.",
+                    "Účty 473 a 571; jedná se o rezervy osvobozené od daně podle zvláštního pokynu ministerstva.",
+                    "Účty 451 a 552; jedná se o rezervy daňově uznatelné, které přímo snižují základ daně z příjmů."
+                ],
+                "spravnaIndex": 3,
+                "vysvetleni": "Zákonné rezervy se účtují na 552 / 451, jsou upraveny zákonem o rezervách a jsou daňově uznatelné.",
+                "citace": "Zákonné: Účet 451 a účet 552 – tvorba a zúčtování zákonných rezerv. Upravené zákonem o rezervách, daňově uznatelné (snižují daňový základ)."
+            },
+            {
+                "kategorie": "Zákonné rezervy - Tvorba na opravu DHM",
+                "otazka": "Jakým účetním zápisem a v jaké výši se účtuje roční tvorba zákonné rezervy na opravu v roce 2026?",
+                "moznosti": [
+                    "Tvorba rezervy na opravu se účtuje na účtech 554 / 459 v částce 500 000 Kč jako nedaňový náklad.",
+                    "Tvorba rezervy na opravu se účtuje na účtech 552 / 451 v částce 500 000 Kč jako zákonná rezerva.",
+                    "Tvorba rezervy na opravu se účtuje na účtech 511 / 321 v částce 500 000 Kč jako provozní oprava.",
+                    "Tvorba rezervy na opravu se účtuje na účtech 451 / 552 v částce 500 000 Kč jako čerpání rezervy."
+                ],
+                "spravnaIndex": 1,
+                "vysvetleni": "Tvorba zákonné rezervy na opravu DHM se účtuje zápisem 552 / 451 v částce 500 000 Kč.",
+                "citace": "Tvorba rezervy (vznik dluhu) na opravu v roce 2026 ... 500 000,- ... 552 / 451."
+            },
+            {
+                "kategorie": "Zákonné rezervy - Účtování došlé faktury",
+                "otazka": "Jak se v roce 2028 zaúčtuje došlá faktura za opravu budovy v ceně 1 000 000 Kč bez DPH (DPH 210 000 Kč)?",
+                "moznosti": [
+                    "Faktura bez DPH na 021 / 321 (1 000 000 Kč) a DPH na 343 / 321 (210 000 Kč) jako technické zhodnocení.",
+                    "Faktura bez DPH na 552 / 451 (1 000 000 Kč) a DPH na 343 / 451 (210 000 Kč) jako zrušení rezervy.",
+                    "Faktura bez DPH na 511 / 321 (1 000 000 Kč) a DPH na 343 / 321 (210 000 Kč) jako provozní oprava.",
+                    "Faktura bez DPH na 594 / 459 (1 000 000 Kč) a DPH na 343 / 459 (210 000 Kč) jako ostatní oprava."
+                ],
+                "spravnaIndex": 2,
+                "vysvetleni": "Skutečná oprava budovy se zaúčtuje jako běžný provozní náklad: 511 / 321 (1 000 000 Kč) a DPH 343 / 321 (210 000 Kč).",
+                "citace": "Oprava budovy v roce 2028: Cena bez DPH 1 000 000,- 511 / 321, DPH 210 000,- 343 / 321."
+            },
+            {
+                "kategorie": "Zákonné rezervy - Čerpání rezervy",
+                "otazka": "Jakým účetním zápisem se v roce realizace opravy (2028) provede čerpání vytvořené zákonné rezervy?",
+                "moznosti": [
+                    "Čerpání zákonné rezervy na opravu v roce 2028 se zaúčtuje předpisem 451 / 552 v částce 1 000 000 Kč.",
+                    "Čerpání zákonné rezervy na opravu v roce 2028 se zaúčtuje předpisem 552 / 451 v částce 1 000 000 Kč.",
+                    "Čerpání zákonné rezervy na opravu v roce 2028 se zaúčtuje předpisem 511 / 451 v částce 1 000 000 Kč.",
+                    "Čerpání zákonné rezervy na opravu v roce 2028 se zaúčtuje předpisem 321 / 221 v částce 1 000 000 Kč."
+                ],
+                "spravnaIndex": 0,
+                "vysvetleni": "Čerpání zákonné rezervy v roce realizace opravy se zachytí zápisem 451 / 552 v plné vytvořené výši (1 000 000 Kč).",
+                "citace": "Čerpání zákonné rezervy v roce 2028 ... 1 000 000,- ... 451 / 552."
+            },
+            {
+                "kategorie": "Zákonné rezervy - Úhrada faktury",
+                "otazka": "Jak se účtuje konečná úhrada faktury dodavateli za provedenou opravu budovy z bankovního účtu podniku?",
+                "moznosti": [
+                    "Úhrada faktury za opravu se účtuje na základě dokladu VBÚ předpisem 451 / 221 v částce 1 000 000 Kč.",
+                    "Úhrada faktury za opravu se účtuje na základě dokladu VBÚ předpisem 511 / 221 v částce 1 210 000 Kč.",
+                    "Úhrada faktury za opravu se účtuje na základě dokladu VBÚ předpisem 221 / 321 v částce 1 000 000 Kč.",
+                    "Úhrada faktury za opravu se účtuje na základě dokladu VBÚ předpisem 321 / 221 v částce 1 210 000 Kč."
+                ],
+                "spravnaIndex": 3,
+                "vysvetleni": "Zaplacení faktury za opravu budovy se na základě bankovního výpisu zaúčtuje zápisem 321 / 221 v celkové částce včetně DPH (1 210 000 Kč).",
+                "citace": "Zaplacení FAP ... 1 210 000,- ... 321 / 221."
+            },
+            {
+                "kategorie": "Ostatní rezervy - Právní úprava a daňový dopad",
+                "otazka": "Čím jsou upraveny ostatní rezervy (účty 459 a 554) a jaký mají vliv na základ daně z příjmů?",
+                "moznosti": [
+                    "Jsou upraveny zákonem o rezervách a jsou daňově uznatelné, takže snižují základ daně z příjmů.",
+                    "Jsou upraveny pokynem finančního úřadu a jsou daňově neutrální, takže nemají žádný vliv na daně.",
+                    "Jsou upraveny vnitropodnikovou směrnicí a jsou daňově neuznatelné, takže zvyšují daňový základ.",
+                    "Jsou upraveny mezinárodními standardy IFRS a jsou od daně z příjmů zcela osvobozeny v ČR."
+                ],
+                "spravnaIndex": 2,
+                "vysvetleni": "Ostatní rezervy upravuje vnitropodniková směrnice, jsou daňově neuznatelné a při výpočtu daně zvyšují základ daně z příjmů.",
+                "citace": "Ostatní: Účet 459 a účet 554 – tvorba a zúčtování ostatních rezerv. Upravené vnitropodnikovou směrnicí, daňově neuznatelné (zvyšují daňový základ)."
+            },
+            {
+                "kategorie": "Ostatní rezervy - Příklady použití a účtování",
+                "otazka": "Který z následujících příkladů představuje tvorbu a čerpání ostatních (účelových) rezerv?",
+                "moznosti": [
+                    "Tvorba rezervy na opravu budovy v 5. odpisové skupině s účtováním 552 / 451 a čerpáním 451 / 552.",
+                    "Tvorba rezervy na záruční opravu PC s účtováním 554 / 459 a čerpáním rezervy předpisem 459 / 554.",
+                    "Tvorba rezervy na kurzové ztráty s účtováním 568 / 221 a čerpáním z bankovního účtu 221 / 568.",
+                    "Tvorba rezervy na neuplatněné pohledávky s účtováním 559 / 391 a čerpáním do výnosů 391 / 559."
+                ],
+                "spravnaIndex": 1,
+                "vysvetleni": "Rezerva na záruční opravu PC (doba odpisování 3 roky, 1. odpisová skupina) je ostatní rezervou: tvorba 554 / 459, čerpání 459 / 554.",
+                "citace": "Příklady tvorby ostatních rezerv: Rezerva na záruční opravu PC... tvorba rezervy... 554 / 459, čerpání rezervy... 459 / 554."
+            },
+            {
+                "kategorie": "Dlouhodobé úvěry - Účtování a způsoby čerpání",
+                "otazka": "Jakými dvěma základními způsoby může podnik čerpat poskytnutý dlouhodobý bankovní úvěr na účtu 461?",
+                "moznosti": [
+                    "Prostředky z úvěru musejí být vybrány v hotovosti nebo převedeny na účet finančního úřadu ČR.",
+                    "Prostředky z úvěru mohou být použity výhradně na výplatu mezd nebo na úhradu zákonného pojištění.",
+                    "Prostředky z úvěru musejí být vloženy do základního kapitálu nebo použity na nákup vlastních akcií.",
+                    "Prostředky z úvěru mohou být připsány na BÚ nebo z nich mohou být přímo hrazeny dodavatelské FAP."
+                ],
+                "spravnaIndex": 3,
+                "vysvetleni": "Bankovní úvěry mohou být připsány na bankovní účet podniku (221/261) nebo z nich banka hradí přímo dodavatelské faktury (321/221 přes 261).",
+                "citace": "Dlouhodobé úvěry (účtová skupina 46, účet 461): Účtují se stejně jako krátkodobé úvěry ... mohou být připsány na BÚ nebo z nich mohou být hrazeny FAP."
+            },
+            {
+                "kategorie": "Dlouhodobé úvěry - Účtování úroků",
+                "otazka": "Kdy se úroky z dlouhodobého úvěru účtují na nákladový účet 562 a kdy vstupují do pořizovací ceny investice?",
+                "moznosti": [
+                    "Na účet 562 se účtují běžné úroky; na účty 042 (041) vstupují úroky před uvedením investice do užívání.",
+                    "Na účet 562 se účtují před uvedením investice do užívání; na účty 042/041 se účtují po uvedení do užívání.",
+                    "Na účet 562 se účtují pouze úroky z prodlení; na účty 042/041 vstupují úroky ze všech provozních záloh.",
+                    "Na účet 562 se neúčtují vůbec; úroky z úvěru vždy bez výjimky vstupují přímo na účet 021 nebo 022."
+                ],
+                "spravnaIndex": 0,
+                "vysvetleni": "Úroky před uvedením investice do užívání vstupují do pořizovací ceny (042/041). Běžné úroky po spuštění se účtují do finančních nákladů (562).",
+                "citace": "Úroky z úvěru ... účet 562 - úroky, 042 (041) – pořízení DHM (DNM) před uvedením investice do užívání (úroky jsou součástí PC investice)."
+            },
+            {
+                "kategorie": "Dlouhodobé úvěry - Účel použití",
+                "otazka": "Pro které z následujících investičních účelů se standardně využívají dlouhodobé bankovní úvěry?",
+                "moznosti": [
+                    "Výhradně k úhradě drobných kancelářských potřeb, pohonných hmot a běžného poštovného v podniku.",
+                    "K nákupu DM (pozemky, budovy, stroje), rekonstrukci budov či nákupu podílu v jiném podniku.",
+                    "Výhradně ke krytí měsíčních mzdových nákladů a sociálního pojištění zaměstnanců v podniku.",
+                    "K výplatě podílů na zisku společníkům a k úhradě pokut vyměřených správcem daně v řízení."
+                ],
+                "spravnaIndex": 1,
+                "vysvetleni": "Dlouhodobé úvěry slouží k financování dlouhodobých potřeb, jako je nákup DM, rekonstrukce a modernizace či nákup majetkových podílů.",
+                "citace": "Použití dlouhodobých úvěrů … nákup DM (pozemky, budovy, stroje, dopravní prostředky …), rekonstrukce a modernizace budov, nákup podílu v jiném podniku …"
+            },
+            {
+                "kategorie": "Úvěrová smlouva - Náležitosti obsahu",
+                "otazka": "Které základní údaje musejí být obsaženy v úvěrové smlouvě s bankou?",
+                "moznosti": [
+                    "Pouze jméno generálního ředitele banky, výše ročního obratu podniku a seznam členů dozorčí rady.",
+                    "Pouze přesný seznam zákazníků podniku, platná výše základního kapitálu a hodnota skladových zásob.",
+                    "Identifikace stran, výše a účel úvěru, úroková sazba p.a., poplatky, podmínky splácení a zajištění.",
+                    "Rozpis všech přijatých zálohových faktur, daňové přiznání k DPH za minulý rok a číslo účtu auditora."
+                ],
+                "spravnaIndex": 2,
+                "vysvetleni": "Úvěrová smlouva obsahuje smluvní strany, výši a účel úvěru, úrokovou sazbu p.a., poplatky, podmínky a termíny splácení a ujednání o zajištění.",
+                "citace": "Obsah úvěrové smlouvy: Identifikace smmluvních stran, Výše a účel úvěru, Úroková sazba p. a. a poplatky, Podmínky splácení, Ujednání o zajištění úvěru."
+            },
+            {
+                "kategorie": "Úvěrová smlouva - Formy zajištění",
+                "otazka": "Jakým majetkem může dlužník dle smlouvy o úvěru ručit za poskytnutý dlouhodobý bankovní úvěr?",
+                "moznosti": [
+                    "Lze ručit nemovitostmi, stroji, zbožím, cennými papíry, drahými kovy či uměleckými předměty.",
+                    "Lze ručit výhradně hotovostí uloženou v pokladně podniku nebo ceninami v minimální hodnotě úvěru.",
+                    "Lze ručit výhradně nehmotným majetkem, jako jsou softwarové licence a zřízená patenty podniku.",
+                    "Lze ručit výhradně budoucími neodvedenými zálohami na daň z příjmů právnických osob u FÚ."
+                ],
+                "spravnaIndex": 0,
+                "vysvetleni": "Zajištění úvěru lze provést zástavou nemovitostí, strojního zařízení, zásob zboží, cenných papírů, drahých kovů či umění.",
+                "citace": "Ujednání o zajištění úvěru – lze ručit nemovitostmi, stroji, zbožím, cennými papíry, drahými kovy, uměleckými předměty …"
+            },
+            {
+                "kategorie": "Příklad úvěru - Připsání na BÚ",
+                "otazka": "Jak se v účetnictví zachytí poskytnutý úvěr (500 000 Kč) a jeho připsání na BÚ?",
+                "moznosti": [
+                    "VÚÚ poskytnutý úvěr 461 / 221 a VBÚ připsání na BÚ 261 / 221.",
+                    "VÚÚ poskytnutý úvěr 221 / 461 a VBÚ připsání na BÚ 461 / 261.",
+                    "VÚÚ poskytnutý úvěr 321 / 461 a VBÚ připsání na BÚ 221 / 321.",
+                    "VÚÚ poskytnutý úvěr 261 / 461 a VBÚ připsání na BÚ 221 / 261."
+                ],
+                "spravnaIndex": 3,
+                "vysvetleni": "VÚÚ – poskytnutí úvěru: 261 / 461. VBÚ – připsání na bankovní účet: 221 / 261.",
+                "citace": "VÚÚ – poskytnutý úvěr 500 000,- 261 / 461; VBÚ – připsání úvěru na BÚ 500 000,- 221 / 261."
+            },
+            {
+                "kategorie": "Příklad úvěru - Úhrada faktury a poplatky",
+                "otazka": "Jakým účetním zápisem se účtuje zaplacený poplatek za správu úvěrového účtu ve výši 3 000 Kč na VBÚ?",
+                "moznosti": [
+                    "Zaplacení poplatku se účtuje předpisem 562 / 221 na základě výpisu z bankovního účtu podniku.",
+                    "Zaplacení poplatku se účtuje předpisem 568 / 221 na základě výpisu z bankovního účtu podniku.",
+                    "Zaplacení poplatku se účtuje předpisem 518 / 221 na základě výpisu z bankovního účtu podniku.",
+                    "Zaplacení poplatku se účtuje předpisem 461 / 221 na základě výpisu z bankovního účtu podniku."
+                ],
+                "spravnaIndex": 1,
+                "vysvetleni": "Bankovní poplatky spojené s úvěrem se účtují na nákladový účet 568 – Ostatní finanční náklady (568 / 221).",
+                "citace": "VBÚ – poplatky z úvěru 3 000,- 568 / 221."
+            },
+            {
+                "kategorie": "Příklad úvěru - Splátka dlouhodobého úvěru",
+                "otazka": "Jaké dva doklady a účetní zápisy zachycují splátku dlouhodobého úvěru ve výši 100 000 Kč?",
+                "moznosti": [
+                    "VBÚ: splátka úvěru 461 / 221 (100 000 Kč) a VÚÚ: splátka úvěru 221 / 461 (100 000 Kč).",
+                    "VBÚ: splátka úvěru 221 / 261 (100 000 Kč) a VÚÚ: splátka úvěru 261 / 461 (100 000 Kč).",
+                    "VBÚ: splátka úvěru 261 / 221 (100 000 Kč) a VÚÚ: splátka úvěru 461 / 261 (100 000 Kč).",
+                    "VBÚ: splátka úvěru 321 / 221 (100 000 Kč) a VÚÚ: splátka úvěru 461 / 321 (100 000 Kč)."
+                ],
+                "spravnaIndex": 2,
+                "vysvetleni": "Splátka úvěru z BÚ: VBÚ 261 / 221 (100 000 Kč). Snížení dlužení u banky: VÚÚ 461 / 261 (100 000 Kč).",
+                "citace": "VBÚ – splátka úvěru 100 000,- 261 / 221; VÚÚ – splátka úvěru 100 000,- 461 / 261."
+            },
+            {
+                "kategorie": "Dlouhodobé dluhopisy - Podstata a emise",
+                "otazka": "Co představuje emise dlouhodobých dluhopisů pro podnik a na kterém účtu se účtují emitované dluhopisy?",
+                "moznosti": [
+                    "Představuje krátkodobou pohledávku vůči odběratelům zboží a účtuje se na rozvahovém účtu 311.",
+                    "Představuje cizí zdroj financování podniku se vznikem dluhu a účtuje se na pasivním účtu 473.",
+                    "Představuje vlastnický podíl na kapitálu jiného podniku a účtuje se na majetkovém účtu 061.",
+                    "Představuje přijatý bankovní úvěr určený na pořízení majetku a účtuje se na pasivním účtu 461."
+                ],
+                "spravnaIndex": 1,
+                "vysvetleni": "Vydání (emise) dluhopisů je pro podnik cizím zdrojem financování. Vzniká dluh účtovaný na účtu 473.",
+                "citace": "Dlouhodobé dluhopisy (účtová skupina 47, účet 473): Podnik vydává (emituje) dluhopisy … cizí zdroj financování podniku. Podniku vzniká dluh, který musí zaplatit, včetně úroku."
+            },
+            {
+                "kategorie": "Dlouhodobé dluhopisy - Předpis emise",
+                "otazka": "Jakým účetním zápisem se účtuje samotná emise dlouhodobých dluhopisů v jmenovité hodnotě 500 000 Kč?",
+                "moznosti": [
+                    "Emise dluhopisů se zaúčtuje předpisem 375 / 473 v částce 500 000 Kč jako vznik pohledávky a dluhu.",
+                    "Emise dluhopisů se zaúčtuje předpisem 221 / 375 v částce 500 000 Kč jako přímý příjem na bankovní účet.",
+                    "Emise dluhopisů se zaúčtuje předpisem 473 / 221 v částce 500 000 Kč jako splacení závazku z dluhopisů.",
+                    "Emise dluhopisů se zaúčtuje předpisem 562 / 221 v částce 500 000 Kč jako finanční náklad na úroky."
+                ],
+                "spravnaIndex": 0,
+                "vysvetleni": "Předpis emise dluhopisů v jmenovité hodnotě se účtuje na účty 375 (Pohledávky za emitované dluhopisy) / 473 (Emitované dlouhodobé dluhopisy).",
+                "citace": "Emise dluhopisů 500 000,- 375 / 473."
+            },
+            {
+                "kategorie": "Dlouhodobé dluhopisy - Úhrada a splacení",
+                "otazka": "Jak se účtuje zaplacení úroku dlužníkem (50 000 Kč) z emitovaných dlouhodobých dluhopisů?",
+                "moznosti": [
+                    "Zaplacení úroku se účtuje na základě bankovního výpisu předpisem 473 / 221 v částce 50 000 Kč.",
+                    "Zaplacení úroku se účtuje na základě bankovního výpisu předpisem 375 / 221 v částce 50 000 Kč.",
+                    "Zaplacení úroku se účtuje na základě bankovního výpisu předpisem 221 / 562 v částce 50 000 Kč.",
+                    "Zaplacení úroku se účtuje na základě bankovního výpisu předpisem 562 / 221 v částce 50 000 Kč."
+                ],
+                "spravnaIndex": 3,
+                "vysvetleni": "Úrok z emitovaných dluhopisů je finančním nákladem podniku a účtuje se zápisem 562 / 221.",
+                "citace": "Zaplacení úroku 50 000,- 562 / 221."
+            },
+            {
+                "kategorie": "Přijaté zálohy u neplátce DPH - Účtování",
+                "otazka": "Jak se zaúčtuje přijatá dlouhodobá provozní záloha (60 000 Kč) od odběratele u podniku, který není plátcem DPH?",
+                "moznosti": [
+                    "Přijatá záloha se zaúčtuje na základě bankovního výpisu (VBÚ) předpisem 311 / 475 v částce 60 000 Kč.",
+                    "Přijatá záloha se zaúčtuje na základě bankovního výpisu (VBÚ) předpisem 475 / 221 v částce 60 000 Kč.",
+                    "Přijatá záloha se zaúčtuje na základě bankovního výpisu (VBÚ) předpisem 221 / 475 v částce 60 000 Kč.",
+                    "Přijatá záloha se zaúčtuje na základě bankovního výpisu (VBÚ) předpisem 601 / 221 v částce 60 000 Kč."
+                ],
+                "spravnaIndex": 2,
+                "vysvetleni": "U neplátce DPH se přijatá záloha na bankovní účet účtuje jednoduše jako zvýšení peněz a vznik závazku: 221 / 475.",
+                "citace": "Účtování záloh u neplátce DPH: VBÚ – přijatá provozní záloha 60 000,- 221 / 475."
+            },
+            {
+                "kategorie": "Přijaté zálohy u neplátce DPH - Vyúčtování",
+                "otazka": "Jakým zápisem se provede zúčtování přijaté zálohy (60 000 Kč) při vystavení odběratelské faktury za výrobky (80 000 Kč)?",
+                "moznosti": [
+                    "Vyúčtování přijaté zálohy se zaúčtuje v rámci odběratelské faktury (FAV) předpisem 311 / 601 v částce 60 000 Kč.",
+                    "Vyúčtování přijaté zálohy se zaúčtuje v rámci odběratelské faktury (FAV) předpisem 221 / 311 v částce 60 000 Kč.",
+                    "Vyúčtování přijaté zálohy se zaúčtuje v rámci odběratelské faktury (FAV) předpisem 311 / 475 v částce 60 000 Kč.",
+                    "Vyúčtování přijaté zálohy se zaúčtuje v rámci odběratelské faktury (FAV) předpisem 475 / 311 v částce 60 000 Kč."
+                ],
+                "spravnaIndex": 3,
+                "vysvetleni": "Při vystavení faktury na 80 000 Kč (311 / 601) se započte přijatá záloha předpisem 475 / 311 v částce 60 000 Kč.",
+                "citace": "FAV – prodej výrobků 80 000,- 311 / 601; FAV – vyúčtování zálohy 60 000,- 475 / 311."
+            },
+            {
+                "kategorie": "Přijaté zálohy u plátce DPH - Povinnost k DPH",
+                "otazka": "K jakému dni vzniká plátci DPH povinnost přiznat a odvést DPH z přijaté zálohy od odběratele?",
+                "moznosti": [
+                    "Povinnost přiznat DPH vzniká ke dni zdanitelného plnění nebo ke dni přijetí platby (co nastane dříve).",
+                    "Povinnost přiznat DPH vzniká výhradně k poslednímu dni kalendářního roku bez ohledu na úhradu.",
+                    "Povinnost přiznat DPH vzniká až v momentě doplacení konečné faktury na bankovní účet podniku.",
+                    "Povinnost přiznat DPH nevzniká vůbec, protože zálohy jsou osvobozeny od daně z přidané hodnoty."
+                ],
+                "spravnaIndex": 0,
+                "vysvetleni": "Zákon o DPH stanoví povinnost přiznat DPH ke dni zdanitelného plnění nebo ke dni přijetí platby, a to podle toho, který den nastane dříve.",
+                "citace": "Účtování záloh u plátce DPH: Zákon o DPH – plátce DPH musí přiznat DPH ke dni zdanitelného plnění nebo ke dni přijetí platby (podle toho, který den nastane dříve)."
+            },
+            {
+                "kategorie": "Přijaté zálohy u plátce DPH - Lhůta pro doklad",
+                "otazka": "V jaké lhůtě od přijetí platby musí plátce DPH vystavit daňový doklad k přijaté záloze pro odběratele?",
+                "moznosti": [
+                    "Daňový doklad musí být vystaven nejpozději do 30 dnů od konce příslušného kalendářního měsíce.",
+                    "Daňový doklad k přijaté platbě musí být vystaven a poslán odběrateli nejpozději do 15 dnů.",
+                    "Daňový doklad musí být vystaven současně s podáním ročního daňového přiznání k dani z příjmů.",
+                    "Daňový doklad se vystavovat nemusí, stačí běžný bankovní výpis o přijaté platbě na účet."
+                ],
+                "spravnaIndex": 1,
+                "vysvetleni": "Plátce DPH musí do 15 dnů od přijetí platby vystavit daňový doklad k přijaté platbě a doručit jej odběrateli.",
+                "citace": "do 15 dnů od přijetí platby musí vystavit daňový doklad k přijaté platbě a poslat odběrateli."
+            },
+            {
+                "kategorie": "Přijaté zálohy u plátce DPH - Účtování schématu",
+                "otazka": "Přijali jsme zálohu 121 000 Kč včetně DPH. Jak se zaúčtuje DPH (21 000 Kč) z vystaveného daňového dokladu?",
+                "moznosti": [
+                    "DPH z přijaté zálohy se zaúčtuje na základě daňového dokladu účetním předpisem 343 / 221 (21 000 Kč).",
+                    "DPH z přijaté zálohy se zaúčtuje na základě daňového dokladu účetním předpisem 311 / 343 (21 000 Kč).",
+                    "DPH z přijaté zálohy se zaúčtuje na základě daňového dokladu účetním předpisem 343 / 475 (21 000 Kč).",
+                    "DPH z přijaté zálohy se zaúčtuje na základě daňového dokladu účetním předpisem 475 / 343 (21 000 Kč)."
+                ],
+                "spravnaIndex": 3,
+                "vysvetleni": "Přijatá záloha 121 000 Kč na BÚ = 221 / 475. Daňový doklad k záloze na DPH 21 000 Kč sníží zálohový závazek a předepíše DPH: 475 / 343.",
+                "citace": "Schéma účtování záloh u plátce DPH: daňový doklad na přijatou platbu ... 21 000 Kč ... 475 / 343."
+            },
+            {
+                "kategorie": "Směnky k úhradě - Charakteristika a úrok",
+                "otazka": "O jaký platební prostředek se jedná u dlouhodobé směnky k úhradě a co je nutné provést k rozvahovému dni?",
+                "moznosti": [
+                    "Jedná se o hotovostní platební doklad a k rozvahovému dni je nutné provést storno celé směnky.",
+                    "Jedná se o bezhotovostní šek a k rozvahovému dni se doúčtuje kurzový rozdíl na účtu 563.",
+                    "Jedná se o úvěrový platební prostředek a k rozvahovému dni je třeba doúčtovat úrok na účet 562.",
+                    "Jedná se o ceninu v majetku podniku a k rozvahovému dni se odepíše do nákladů na účet 501."
+                ],
+                "spravnaIndex": 2,
+                "vysvetleni": "Směnka je úvěrový platební prostředek (mění běžný závazek ve směnečný). K rozvahovému dni se doúčtuje úrok na účet 562.",
+                "citace": "Dlouhodobé směnky k úhradě... Úvěrový platební prostředek – závazek vůči dodavateli se mění v závazek směnečný. K rozvahovému dni je třeba doúčtovat úrok (562 – úroky)."
+            },
+            {
+                "kategorie": "Směnky k úhradě - Přijetí směnky",
+                "otazka": "Faktura za materiál činí 500 000 Kč + DPH 105 000 Kč (321). Jak se zaúčtuje vydání/přijetí směnky k úhradě?",
+                "moznosti": [
+                    "Přijetí směnky k úhradě se zaúčtuje na základě VÚD účetním zápisem 478 / 321 v částce 605 000 Kč.",
+                    "Přijetí směnky k úhradě se zaúčtuje na základě VÚD účetním zápisem 321 / 478 v částce 605 000 Kč.",
+                    "Přijetí směnky k úhradě se zaúčtuje na základě VÚD účetním zápisem 321 / 221 v částce 605 000 Kč.",
+                    "Přijetí směnky k úhradě se zaúčtuje na základě VÚD účetním zápisem 111 / 478 v částce 605 000 Kč."
+                ],
+                "spravnaIndex": 1,
+                "vysvetleni": "Přeměna běžného dodavatelského závazku (321) na směnečný závazek (478) se zaúčtuje zápisem 321 / 478 v celkové výši 605 000 Kč.",
+                "citace": "VÚD – přijetí směnky k úhradě ... 605 000,- ... 321 / 478."
+            },
+            {
+                "kategorie": "Směnky k úhradě - Předpis a rozlišení úroku",
+                "otazka": "Celkový směnečný úrok činí 95 000 Kč (40 000 Kč běžný rok, 55 000 Kč příští rok). Jak se účtuje předpis úroku?",
+                "moznosti": [
+                    "Předpis celkového úroku 381 / 478 (95 000 Kč), část v běžném roce 562 / 381 (40k) a v dalším roce 562 / 381 (55k).",
+                    "Předpis celkového úroku 562 / 478 (95 000 Kč), část v běžném roce 381 / 562 (40k) a v dalším roce 381 / 562 (55k).",
+                    "Předpis celkového úroku 478 / 381 (95 000 Kč), část v běžném roce 381 / 562 (40k) a v dalším roce 381 / 562 (55k).",
+                    "Předpis celkového úroku 562 / 221 (95 000 Kč), část v běžném roce 381 / 221 (40k) a v dalším roce 381 / 221 (55k)."
+                ],
+                "spravnaIndex": 0,
+                "vysvetleni": "VÚD úrok celkem: 381 / 478 (95 000 Kč). Časové rozlišení úroku: v běžném roce 562 / 381 (40 000 Kč), v dalším roce 562 / 381 (55 000 Kč).",
+                "citace": "VÚD – úrok 95 000,- 381 / 478; VÚD – část úroků v běžném roce 40 000,- 562 / 381; VÚD – část úroků v dalším roce 55 000,- 562 / 381."
+            },
+            {
+                "kategorie": "Směnky k úhradě - Proplácení směnky",
+                "otazka": "Jak se zaúčtuje konečné zaplacení směnky k úhradě včetně celkového úroku (700 000 Kč) z bankovního účtu?",
+                "moznosti": [
+                    "Zaplacení směnky k úhradě se zaúčtuje na základě VBÚ předpisem 221 / 478 v částce 700 000 Kč.",
+                    "Zaplacení směnky k úhradě se zaúčtuje na základě VBÚ předpisem 321 / 221 v částce 700 000 Kč.",
+                    "Zaplacení směnky k úhradě se zaúčtuje na základě VBÚ předpisem 478 / 221 v částce 700 000 Kč.",
+                    "Zaplacení směnky k úhradě se zaúčtuje na základě VBÚ předpisem 562 / 221 v částce 700 000 Kč."
+                ],
+                "spravnaIndex": 2,
+                "vysvetleni": "Zaplacení směnky dlužníkem z bankovního účtu zruší směnečný závazek na účtu 478 zápisem 478 / 221 v částce 700 000 Kč.",
+                "citace": "VBÚ – zaplacení směnky k úhradě 700 000,- 478 / 221."
+            },
+            {
+                "kategorie": "Jiné dlouhodobé závazky - Zápůjčka společníka",
+                "otazka": "Jak se zaúčtuje přijatá dlouhodobá zápůjčka od společníka na bankovní účet podniku v částce 500 000 Kč?",
+                "moznosti": [
+                    "Přijatá zápůjčka se zaúčtuje na základě dokladu VBÚ účetním zápisem 221 / 479 v částce 500 000 Kč.",
+                    "Přijatá zápůjčka se zaúčtuje na základě dokladu VBÚ účetním zápisem 479 / 221 v částce 500 000 Kč.",
+                    "Přijatá zápůjčka se zaúčtuje na základě dokladu VBÚ účetním zápisem 221 / 461 v částce 500 000 Kč.",
+                    "Přijatá zápůjčka se zaúčtuje na základě dokladu VBÚ účetním zápisem 379 / 221 v částce 500 000 Kč."
+                ],
+                "spravnaIndex": 0,
+                "vysvetleni": "Přijetí dlouhodobé zápůjčky od společníka na bankovní účet se zaúčtuje předpisem 221 / 479 v částce 500 000 Kč.",
+                "citace": "Příklad – účtování zápůjčky od společníka: VBÚ – zápůjčka od společníka 500 000,- 221 / 479."
+            },
+            {
+                "kategorie": "Jiné dlouhodobé závazky - Úroky ze zápůjčky",
+                "otazka": "Úrok ze zápůjčky společníkovi činí celkem 50 000 Kč (20k běžný rok, 30k dalším rok). Jak se zachytí na VBÚ?",
+                "moznosti": [
+                    "Předpis úroku společníkovi na VBÚ se zaúčtuje předpisem 562 / 479 v částce 50 000 Kč.",
+                    "Předpis úroku společníkovi na VBÚ se zaúčtuje předpisem 479 / 221 v částce 50 000 Kč.",
+                    "Předpis úroku společníkovi na VBÚ se zaúčtuje předpisem 381 / 479 v částce 50 000 Kč.",
+                    "Předpis úroku společníkovi na VBÚ se zaúčtuje předpisem 221 / 381 v částce 50 000 Kč."
+                ],
+                "spravnaIndex": 2,
+                "vysvetleni": "Sjednaný úrok společníkovi se předepíše na účet přechodných nákladů a závazku: VBÚ úroky společníkovi 381 / 479 (50 000 Kč).",
+                "citace": "VBÚ – úroky společníkovi 50 000,- 381 / 479."
+            },
+            {
+                "kategorie": "Jiné dlouhodobé závazky - Časové rozlišení úroků",
+                "otazka": "Jak se časově rozliší úroky ze zápůjčky společníka v běžném roce (20 000 Kč) a v dalším roce (30 000 Kč)?",
+                "moznosti": [
+                    "V běžném roce 381 / 562 (20 000 Kč) a v dalším roce 381 / 562 (30 000 Kč) na základě dokladu VÚD.",
+                    "V běžném roce 562 / 381 (20 000 Kč) a v dalším roce 562 / 381 (30 000 Kč) na základě dokladu VÚD.",
+                    "V běžném roce 479 / 562 (20 000 Kč) a v dalším roce 479 / 562 (30 000 Kč) na základě dokladu VÚD.",
+                    "V běžném roce 562 / 479 (20 000 Kč) a v dalším roce 562 / 479 (30 000 Kč) na základě dokladu VÚD."
+                ],
+                "spravnaIndex": 1,
+                "vysvetleni": "Postupné rozpouštění aktivovaného úroku do nákladů příslušných let: VÚD část úroků v běžném roce 562 / 381 (20 000 Kč) a v dalším roce 562 / 381 (30 000 Kč).",
+                "citace": "VÚD – část úroků v běžném roce 20 000,- 562 / 381; VÚD – část úroků v dalším roce 30 000,- 562 / 381."
+            },
+            {
+                "kategorie": "Jiné dlouhodobé závazky - Úhrada zápůjčky",
+                "otazka": "Jak se zaúčtuje celková konečná úhrada zápůjčky a úroků společníkovi v částce 550 000 Kč z BÚ?",
+                "moznosti": [
+                    "Konečná úhrada se zaúčtuje na základě bankovního výpisu (VBÚ) předpisem 221 / 479 v částce 550 000 Kč.",
+                    "Konečná úhrada se zaúčtuje na základě bankovního výpisu (VBÚ) předpisem 562 / 221 v částce 550 000 Kč.",
+                    "Konečná úhrada se zaúčtuje na základě bankovního výpisu (VBÚ) předpisem 381 / 221 v částce 550 000 Kč.",
+                    "Konečná úhrada se zaúčtuje na základě bankovního výpisu (VBÚ) předpisem 479 / 221 v částce 550 000 Kč."
+                ],
+                "spravnaIndex": 3,
+                "vysvetleni": "Vyrovnání závazku vůči společníkovi včetně úroků se zaúčtuje předpisem 479 / 221 v celkové částce 550 000 Kč.",
+                "citace": "VBÚ – úhrada zápůjčky a úroků 550 000,- 479 / 221."
+            }
+        ];
+
+        /* ==========================================================================
+           2. STATE MANAGEMENT
+           ========================================================================== */
+        let questions = JSON.parse(JSON.stringify(baseQuestions));
+        let currentIndex = 0;
+        let userAnswers = new Array(questions.length).fill(null); // stores index selected or null
+        let isErrorFilterActive = false;
+        let isSoundMuted = false;
+
+        /* ==========================================================================
+           3. WEB AUDIO API SYNTHESIZER (Pure JS offline audio)
+           ========================================================================== */
+        let audioCtx = null;
+
+        function getAudioContext() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (AudioContext) {
+                    audioCtx = new AudioContext();
+                }
+            }
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            return audioCtx;
+        }
+
+        function playSound(type) {
+            if (isSoundMuted) return;
+            const ctx = getAudioContext();
+            if (!ctx) return;
+
+            try {
+                const now = ctx.currentTime;
+                if (type === 'correct') {
+                    // Pleasant Major Chime: C5 (523Hz) -> E5 (659Hz) -> G5 (784Hz)
+                    [523.25, 659.25, 783.99].forEach((freq, idx) => {
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+                        gain.gain.setValueAtTime(0.15, now + idx * 0.08);
+                        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.25);
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+                        osc.start(now + idx * 0.08);
+                        osc.stop(now + idx * 0.08 + 0.25);
+                    });
+                } else if (type === 'wrong') {
+                    // Soft Sawtooth Downward Tone (180Hz -> 100Hz)
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(180, now);
+                    osc.frequency.exponentialRampToValueAtTime(90, now + 0.3);
+                    gain.gain.setValueAtTime(0.12, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.3);
+                } else if (type === 'click') {
+                    // Short Tick
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(800, now);
+                    gain.gain.setValueAtTime(0.05, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.04);
+                } else if (type === 'shuffle') {
+                    // Arpeggio Sweep
+                    [300, 400, 500, 600, 700].forEach((freq, idx) => {
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+                        osc.type = 'triangle';
+                        osc.frequency.setValueAtTime(freq, now + idx * 0.04);
+                        gain.gain.setValueAtTime(0.08, now + idx * 0.04);
+                        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.04 + 0.12);
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+                        osc.start(now + idx * 0.04);
+                        osc.stop(now + idx * 0.04 + 0.12);
+                    });
+                }
+            } catch (e) {
+                console.warn("Audio playback exception:", e);
+            }
+        }
+
+        function toggleSound() {
+            isSoundMuted = !isSoundMuted;
+            const icon = document.getElementById('soundIcon');
+            const btn = document.getElementById('soundToggleBtn');
+            if (isSoundMuted) {
+                icon.className = 'fa-solid fa-volume-xmark text-slate-500';
+                btn.classList.add('opacity-60');
+            } else {
+                icon.className = 'fa-solid fa-volume-high text-slate-300';
+                btn.classList.remove('opacity-60');
+                playSound('click');
+            }
+        }
+
+        /* ==========================================================================
+           4. OBCHODNÍ AKADEMIE GRADING LOGIC (1–5)
+           ========================================================================== */
+        function calculateGrade(percent) {
+            if (percent >= 90) return { grade: 1, text: "1 - Výborný", color: "text-emerald-400", bg: "bg-emerald-500/10 text-emerald-400" };
+            if (percent >= 75) return { grade: 2, text: "2 - Chvalitebný", color: "text-teal-400", bg: "bg-teal-500/10 text-teal-400" };
+            if (percent >= 60) return { grade: 3, text: "3 - Dobrý", color: "text-amber-400", bg: "bg-amber-500/10 text-amber-400" };
+            if (percent >= 45) return { grade: 4, text: "4 - Dostatečný", color: "text-orange-400", bg: "bg-orange-500/10 text-orange-400" };
+            return { grade: 5, text: "5 - Nedostatečný", color: "text-rose-400", bg: "bg-rose-500/10 text-rose-400" };
+        }
+
+        /* ==========================================================================
+           5. UI RENDERERS
+           ========================================================================== */
+        
+        // Initialize Application
+        window.onload = function () {
+            renderQuestionGridNav();
+            loadQuestion(0);
+            updateStats();
+            setupKeyboardShortcuts();
+
+            // Set current date in protocol
+            const today = new Date();
+            document.getElementById('protocolDate').innerText = `Datum: ${today.getDate()}.${today.getMonth()+1}.${today.getFullYear()}`;
+        };
+
+        // Render Question Navigation Chips (1-40)
+        function renderQuestionGridNav() {
+            const grid = document.getElementById('questionGridNav');
+            grid.innerHTML = '';
+
+            questions.forEach((q, idx) => {
+                const btn = document.createElement('button');
+                btn.id = `navChip-${idx}`;
+                btn.onclick = () => {
+                    playSound('click');
+                    loadQuestion(idx);
+                };
+
+                let statusClass = "bg-slate-700/60 text-slate-300 hover:bg-slate-700 border-slate-600/40";
+                
+                if (userAnswers[idx] !== null) {
+                    if (userAnswers[idx] === q.spravnaIndex) {
+                        statusClass = "bg-emerald-600/30 text-emerald-300 border-emerald-500/50 font-bold";
+                    } else {
+                        statusClass = "bg-rose-600/30 text-rose-300 border-rose-500/50 font-bold";
+                    }
+                }
+
+                if (idx === currentIndex) {
+                    statusClass += " ring-2 ring-indigo-500 ring-offset-2 ring-offset-slate-900";
+                }
+
+                btn.className = `py-2 rounded-xl text-xs font-semibold border transition-all ${statusClass}`;
+                btn.innerText = idx + 1;
+                grid.appendChild(btn);
+            });
+        }
+
+        // Load specific question into the card
+        function loadQuestion(index) {
+            if (index < 0 || index >= questions.length) return;
+            currentIndex = index;
+
+            const q = questions[currentIndex];
+
+            // Badges & Category
+            document.getElementById('qNumberBadge').innerText = `Otázka ${currentIndex + 1} z ${questions.length}`;
+            document.getElementById('qCategory').innerText = q.kategorie;
+            document.getElementById('qText').innerText = q.otazka;
+
+            // Progress bar in card
+            const progressPct = ((currentIndex + 1) / questions.length) * 100;
+            document.getElementById('cardProgressBar').style.width = `${progressPct}%`;
+
+            // Render Options
+            const optionsGrid = document.getElementById('optionsGrid');
+            optionsGrid.innerHTML = '';
+
+            const optionPrefixes = ['A', 'B', 'C', 'D'];
+            const isAnswered = userAnswers[currentIndex] !== null;
+            const selectedOptIndex = userAnswers[currentIndex];
+
+            q.moznosti.forEach((optionText, optIdx) => {
+                const optBtn = document.createElement('button');
+                optBtn.disabled = isAnswered;
+                optBtn.onclick = () => handleSelectOption(optIdx);
+
+                let btnStyle = "bg-slate-700/40 hover:bg-slate-700 border-slate-600/50 text-slate-200";
+                let badgeStyle = "bg-slate-800 text-slate-400 border-slate-700";
+                let iconHtml = '';
+
+                if (isAnswered) {
+                    if (optIdx === q.spravnaIndex) {
+                        // Correct option styling
+                        btnStyle = "bg-emerald-950/60 border-emerald-500 text-emerald-200 font-medium ring-1 ring-emerald-500/50";
+                        badgeStyle = "bg-emerald-600 text-white border-emerald-400";
+                        iconHtml = '<i class="fa-solid fa-circle-check text-emerald-400 text-lg ml-auto"></i>';
+                    } else if (optIdx === selectedOptIndex) {
+                        // Wrong option selected styling
+                        btnStyle = "bg-rose-950/60 border-rose-500 text-rose-200 font-medium ring-1 ring-rose-500/50";
+                        badgeStyle = "bg-rose-600 text-white border-rose-400";
+                        iconHtml = '<i class="fa-solid fa-circle-xmark text-rose-400 text-lg ml-auto"></i>';
+                    } else {
+                        btnStyle = "bg-slate-800/30 border-slate-700/40 text-slate-500 opacity-60";
+                    }
+                }
+
+                optBtn.className = `w-full p-4 rounded-xl border text-left text-sm leading-relaxed transition-all flex items-center gap-3.5 ${btnStyle}`;
+                
+                optBtn.innerHTML = `
+                    <span class="px-2.5 py-1 rounded-lg text-xs font-black border min-w-[30px] text-center shrink-0 ${badgeStyle}">
+                        ${optionPrefixes[optIdx]}
+                    </span>
+                    <span class="flex-1">${optionText}</span>
+                    ${iconHtml}
+                `;
+
+                optionsGrid.appendChild(optBtn);
+            });
+
+            // Explanation & Citation box
+            const explanationBox = document.getElementById('explanationBox');
+            if (isAnswered) {
+                document.getElementById('explanationText').innerText = q.vysvetleni;
+                document.getElementById('citationText').innerText = q.citace;
+                explanationBox.classList.remove('hidden');
+            } else {
+                explanationBox.classList.add('hidden');
+            }
+
+            // Update Nav Prev/Next Buttons
+            document.getElementById('prevBtn').disabled = (currentIndex === 0);
+            
+            const nextBtn = document.getElementById('nextBtn');
+            if (currentIndex === questions.length - 1) {
+                nextBtn.innerHTML = '<span>Tiskový protokol</span> <i class="fa-solid fa-file-invoice"></i>';
+            } else {
+                nextBtn.innerHTML = '<span>Další</span> <i class="fa-solid fa-arrow-right"></i>';
+            }
+
+            // Highlight Active Chip
+            renderQuestionGridNav();
+        }
+
+        // Handle Option Click
+        function handleSelectOption(optIdx) {
+            if (userAnswers[currentIndex] !== null) return; // already answered
+
+            userAnswers[currentIndex] = optIdx;
+            const q = questions[currentIndex];
+
+            if (optIdx === q.spravnaIndex) {
+                playSound('correct');
+            } else {
+                playSound('wrong');
+            }
+
+            loadQuestion(currentIndex);
+            updateStats();
+        }
+
+        // Next Question Navigation
+        function nextQuestion() {
+            playSound('click');
+
+            if (isErrorFilterActive) {
+                // Find next error index
+                const nextErrorIdx = findNextErrorIndex(currentIndex + 1);
+                if (nextErrorIdx !== -1) {
+                    loadQuestion(nextErrorIdx);
+                } else {
+                    // loop back or show alert
+                    const firstError = findNextErrorIndex(0);
+                    if (firstError !== -1) loadQuestion(firstError);
+                }
+                return;
+            }
+
+            if (currentIndex < questions.length - 1) {
+                loadQuestion(currentIndex + 1);
+            } else {
+                openProtocolModal();
+            }
+        }
+
+        // Previous Question Navigation
+        function prevQuestion() {
+            playSound('click');
+
+            if (isErrorFilterActive) {
+                const prevErrorIdx = findPrevErrorIndex(currentIndex - 1);
+                if (prevErrorIdx !== -1) {
+                    loadQuestion(prevErrorIdx);
+                }
+                return;
+            }
+
+            if (currentIndex > 0) {
+                loadQuestion(currentIndex - 1);
+            }
+        }
+
+        // Helper to find next incorrect answer index
+        function findNextErrorIndex(startIdx) {
+            for (let i = startIdx; i < questions.length; i++) {
+                if (userAnswers[i] !== null && userAnswers[i] !== questions[i].spravnaIndex) {
+                    return i;
+                }
+            }
+            return -1;
+        }
+
+        function findPrevErrorIndex(startIdx) {
+            for (let i = startIdx; i >= 0; i--) {
+                if (userAnswers[i] !== null && userAnswers[i] !== questions[i].spravnaIndex) {
+                    return i;
+                }
+            }
+            return -1;
+        }
+
+        // Update Dashboard Stats & Grading
+        function updateStats() {
+            let answeredCount = 0;
+            let correctCount = 0;
+            let incorrectCount = 0;
+
+            userAnswers.forEach((ans, idx) => {
+                if (ans !== null) {
+                    answeredCount++;
+                    if (ans === questions[idx].spravnaIndex) {
+                        correctCount++;
+                    } else {
+                        incorrectCount++;
+                    }
+                }
+            });
+
+            document.getElementById('statProgress').innerText = `${answeredCount} / ${questions.length}`;
+            document.getElementById('statCorrect').innerText = correctCount;
+            document.getElementById('statIncorrect').innerText = incorrectCount;
+            document.getElementById('errorCountBadge').innerText = incorrectCount;
+
+            const accuracy = answeredCount > 0 ? Math.round((correctCount / answeredCount) * 100) : 0;
+            document.getElementById('statAccuracy').innerText = `${accuracy} %`;
+
+            // Grade calculations
+            const gradeInfo = calculateGrade(accuracy);
+            const gradeBadge = document.getElementById('gradeBadgeBox');
+            const gradeText = document.getElementById('statGrade');
+
+            if (answeredCount === 0) {
+                gradeBadge.innerText = '-';
+                gradeBadge.className = 'p-2.5 bg-slate-700/40 text-slate-400 rounded-lg font-black text-lg min-w-[42px] text-center';
+                gradeText.innerText = 'Zatím nehodnoceno';
+                gradeText.className = 'text-sm font-bold text-slate-400';
+            } else {
+                gradeBadge.innerText = gradeInfo.grade;
+                gradeBadge.className = `p-2.5 rounded-lg font-black text-lg min-w-[42px] text-center ${gradeInfo.bg}`;
+                gradeText.innerText = gradeInfo.text;
+                gradeText.className = `text-sm font-bold ${gradeInfo.color}`;
+            }
+        }
+
+        /* ==========================================================================
+           6. RESHUFFLE & RESTART ACTIONS
+           ========================================================================== */
+        
+        // Reshuffle questions AND their internal options while preserving correct answer logic
+        function reshuffleQuestions() {
+            playSound('shuffle');
+
+            // Confirm if answers exist
+            const hasAnswers = userAnswers.some(a => a !== null);
+
+            // Fisher-Yates shuffle array algorithm
+            for (let i = questions.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [questions[i], questions[j]] = [questions[j], questions[i]];
+                [userAnswers[i], userAnswers[j]] = [userAnswers[j], userAnswers[i]];
+            }
+
+            // Also shuffle options inside each question
+            questions.forEach((q, qIdx) => {
+                const correctAnswerText = q.moznosti[q.spravnaIndex];
+                
+                // Shuffle options
+                for (let i = q.moznosti.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [q.moznosti[i], q.moznosti[j]] = [q.moznosti[j], q.moznosti[i]];
+                }
+
+                // Re-find new correct index
+                q.spravnaIndex = q.moznosti.indexOf(correctAnswerText);
+            });
+
+            currentIndex = 0;
+            renderQuestionGridNav();
+            loadQuestion(0);
+            updateStats();
+        }
+
+        // Toggle Error Filter Mode
+        function toggleErrorFilter() {
+            playSound('click');
+            isErrorFilterActive = !isErrorFilterActive;
+            const btn = document.getElementById('errorFilterBtn');
+
+            if (isErrorFilterActive) {
+                btn.classList.add('bg-amber-500/20', 'border-amber-500/50', 'text-amber-300');
+                // Jump to first error
+                const firstErr = findNextErrorIndex(0);
+                if (firstErr !== -1) {
+                    loadQuestion(firstErr);
+                } else {
+                    alert('Nebyly nalezeny žádné chybné odpovědi.');
+                    isErrorFilterActive = false;
+                    btn.classList.remove('bg-amber-500/20', 'border-amber-500/50', 'text-amber-300');
+                }
+            } else {
+                btn.classList.remove('bg-amber-500/20', 'border-amber-500/50', 'text-amber-300');
+            }
+        }
+
+        // Restart Modal triggers
+        function confirmRestart() {
+            playSound('click');
+            document.getElementById('restartModal').classList.remove('hidden');
+        }
+
+        function closeRestartModal() {
+            document.getElementById('restartModal').classList.add('hidden');
+        }
+
+        function executeRestart() {
+            closeRestartModal();
+            playSound('shuffle');
+            questions = JSON.parse(JSON.stringify(baseQuestions));
+            userAnswers = new Array(questions.length).fill(null);
+            currentIndex = 0;
+            isErrorFilterActive = false;
+            
+            document.getElementById('errorFilterBtn').classList.remove('bg-amber-500/20', 'border-amber-500/50', 'text-amber-300');
+            
+            renderQuestionGridNav();
+            loadQuestion(0);
+            updateStats();
+        }
+
+        /* ==========================================================================
+           7. PROTOCOL MODAL & PRINT AUDIT
+           ========================================================================== */
+        function openProtocolModal() {
+            playSound('click');
+            
+            // Calculate stats for protocol
+            let answeredCount = 0;
+            let correctCount = 0;
+
+            userAnswers.forEach((ans, idx) => {
+                if (ans !== null) {
+                    answeredCount++;
+                    if (ans === questions[idx].spravnaIndex) correctCount++;
+                }
+            });
+
+            const percent = answeredCount > 0 ? Math.round((correctCount / questions.length) * 100) : 0;
+            const gradeInfo = calculateGrade(percent);
+
+            document.getElementById('protoTotalQ').innerText = questions.length;
+            document.getElementById('protoCorrectQ').innerText = `${correctCount} / ${questions.length}`;
+            document.getElementById('protoPercent').innerText = `${percent} %`;
+            document.getElementById('protoGrade').innerText = gradeInfo.text;
+
+            // Render Detailed Question Audit
+            const listContainer = document.getElementById('protoQuestionList');
+            listContainer.innerHTML = '';
+
+            const optionPrefixes = ['A', 'B', 'C', 'D'];
+
+            questions.forEach((q, idx) => {
+                const userAns = userAnswers[idx];
+                const isCorrect = userAns === q.spravnaIndex;
+                const isUnanswered = userAns === null;
+
+                const item = document.createElement('div');
+                
+                let borderStyle = "border-slate-700 bg-slate-900/60";
+                let statusBadge = '<span class="text-xs font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Správně</span>';
+
+                if (isUnanswered) {
+                    borderStyle = "border-slate-700 bg-slate-900/30 opacity-70";
+                    statusBadge = '<span class="text-xs font-bold px-2 py-0.5 rounded bg-slate-700 text-slate-400 border border-slate-600">Nezodpovězeno</span>';
+                } else if (!isCorrect) {
+                    borderStyle = "border-rose-500/40 bg-rose-950/20";
+                    statusBadge = '<span class="text-xs font-bold px-2 py-0.5 rounded bg-rose-500/20 text-rose-400 border border-rose-500/30">Chyba</span>';
+                }
+
+                item.className = `p-4 rounded-xl border ${borderStyle} space-y-2 text-xs print-card`;
+
+                const userAnsText = isUnanswered ? 'Žádná odpověď' : `${optionPrefixes[userAns]}) ${q.moznosti[userAns]}`;
+                const correctAnsText = `${optionPrefixes[q.spravnaIndex]}) ${q.moznosti[q.spravnaIndex]}`;
+
+                item.innerHTML = `
+                    <div class="flex justify-between items-start gap-2">
+                        <div class="font-bold text-slate-200 text-sm">
+                            ${idx + 1}. ${q.otazka}
+                        </div>
+                        <div>${statusBadge}</div>
+                    </div>
+                    <div class="text-slate-400">
+                        <strong>Kategorie:</strong> ${q.kategorie}
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                        <div class="p-2 rounded bg-slate-800/80 border border-slate-700/60">
+                            <span class="text-slate-400 block font-semibold mb-0.5">Vaše odpověď:</span>
+                            <span class="${isCorrect ? 'text-emerald-300 font-medium' : 'text-rose-300 font-medium'}">${userAnsText}</span>
+                        </div>
+                        <div class="p-2 rounded bg-slate-800/80 border border-slate-700/60">
+                            <span class="text-slate-400 block font-semibold mb-0.5">Správná odpověď:</span>
+                            <span class="text-emerald-300 font-medium">${correctAnsText}</span>
+                        </div>
+                    </div>
+                    <div class="pt-2 text-slate-300 italic border-t border-slate-800/80">
+                        <strong class="not-italic text-indigo-400">Citace z materiálu:</strong> "${q.citace}"
+                    </div>
+                `;
+
+                listContainer.appendChild(item);
+            });
+
+            document.getElementById('protocolModal').classList.remove('hidden');
+        }
+
+        function closeProtocolModal() {
+            document.getElementById('protocolModal').classList.add('hidden');
+        }
+
+        /* ==========================================================================
+           8. KEYBOARD SHORTCUTS (A-D, 1-4, Arrows, Enter)
+           ========================================================================== */
+        function setupKeyboardShortcuts() {
+            document.addEventListener('keydown', (e) => {
+                // Ignore keypress if focus is inside inputs
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+                const key = e.key.toUpperCase();
+
+                // Option Keys [A-D] or [1-4]
+                if (['A', '1'].includes(key)) {
+                    handleSelectOption(0);
+                } else if (['B', '2'].includes(key)) {
+                    handleSelectOption(1);
+                } else if (['C', '3'].includes(key)) {
+                    handleSelectOption(2);
+                } else if (['D', '4'].includes(key)) {
+                    handleSelectOption(3);
+                } 
+                // Navigation Keys
+                else if (e.key === 'ArrowRight' || e.key === 'Enter') {
+                    nextQuestion();
+                } else if (e.key === 'ArrowLeft') {
+                    prevQuestion();
+                } else if (key === 'F') {
+                    toggleErrorFilter();
+                } else if (key === 'R') {
+                    reshuffleQuestions();
+                }
+            });
+        }
+    </script>
+</body>
+</html>
